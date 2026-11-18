@@ -18,6 +18,15 @@ import time
 from pathlib import Path
 from typing import Optional, Tuple
 
+# 强制将标准输出/错误流设为 UTF-8 + replace 容错，彻底杜绝英文版 Windows (cp1252) 或传统控制台 (cp936) 下打印中文崩溃
+for _sname in ("stdout", "stderr"):
+    _s = getattr(sys, _sname, None)
+    if _s is not None and hasattr(_s, "reconfigure"):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
 # 确保模块搜索路径包含 system/ 目录（兼容外部工作目录调用）
 SYS_DIR = Path(__file__).resolve().parent
 if str(SYS_DIR) not in sys.path:

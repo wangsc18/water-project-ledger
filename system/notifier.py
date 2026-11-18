@@ -5,6 +5,7 @@ Windows 10/11 右下角原生系统托盘气泡通知模块
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 
@@ -13,6 +14,8 @@ def send_windows_notification(title: str, message: str, is_warning: bool = False
     if not enabled:
         return
     if sys.platform != "win32":
+        return
+    if os.environ.get("GITHUB_ACTIONS") or os.environ.get("CI"):
         return
 
     safe_title = title.replace("'", " ").replace('"', " ")[:60]

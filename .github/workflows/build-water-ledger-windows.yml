@@ -52,6 +52,9 @@ jobs:
             --collect-all onnxruntime `
             --collect-all cv2 `
             --collect-all PyMuPDF `
+            --collect-data docx `
+            --collect-submodules docx `
+            --collect-all openpyxl `
             --hidden-import fitz `
             --hidden-import pymupdf `
             --hidden-import config_loader `
@@ -77,25 +80,38 @@ jobs:
 
       - name: Assemble Portable Folder & Verify End-to-End Demo on Real Windows
         shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
         run: |
           $stageRoot = Join-Path $PWD "release_stage\水利工程电子台账"
           New-Item -ItemType Directory -Force -Path "$stageRoot\system\runtime" | Out-Null
 
-          Copy-Item "项目配置.yaml" "$stageRoot\" -Force
-          Copy-Item "使用指南.md" "$stageRoot\" -Force
-          Copy-Item "*.bat" "$stageRoot\" -Force
-          Copy-Item "*.vbs" "$stageRoot\" -Force
-          Copy-Item "system\*.bat" "$stageRoot\system\" -Force
-          Copy-Item "system\*.py" "$stageRoot\system\" -Force
-          Copy-Item "system\requirements-windows.txt" "$stageRoot\system\" -Force
-          Copy-Item "system\dist_bin\ledger_engine\*" "$stageRoot\system\runtime\" -Recurse -Force
+          Copy-Item -LiteralPath "项目配置.yaml" -Destination $stageRoot -Force
+          Copy-Item -LiteralPath "使用指南.md" -Destination $stageRoot -Force
+          Copy-Item "*.bat" -Destination $stageRoot -Force
+          Copy-Item "*.vbs" -Destination $stageRoot -Force
+          Copy-Item "system\*.bat" -Destination "$stageRoot\system" -Force
+          Copy-Item "system\*.py" -Destination "$stageRoot\system" -Force
+          Copy-Item -LiteralPath "system\requirements-windows.txt" -Destination "$stageRoot\system" -Force
+          Copy-Item "system\dist_bin\ledger_engine\*" -Destination "$stageRoot\system\runtime" -Recurse -Force
 
           Write-Host "=== Running compiled ledger_engine.exe end-to-end verification on Windows ==="
-          & "$stageRoot\system\runtime\ledger_engine.exe" reset --yes --root "$stageRoot"
-          if ($LASTEXITCODE -ne 0) { throw "ledger_engine.exe reset failed with exit code $LASTEXITCODE" }
+          $outReset = & "$stageRoot\system\runtime\ledger_engine.exe" reset --yes --root "$stageRoot" 2>&1
+          $outReset | ForEach-Object { Write-Host $_ }
+          if ($LASTEXITCODE -ne 0) {
+            $errStr = ($outReset | Out-String) -replace "`r?`n", " | "
+            Write-Host "::error::RESET_FAILED: $errStr"
+            throw "ledger_engine.exe reset failed with exit code $LASTEXITCODE"
+          }
 
-          & "$stageRoot\system\runtime\ledger_engine.exe" demo --root "$stageRoot"
-          if ($LASTEXITCODE -ne 0) { throw "ledger_engine.exe demo failed with exit code $LASTEXITCODE" }
+          $outDemo = & "$stageRoot\system\runtime\ledger_engine.exe" demo --root "$stageRoot" 2>&1
+          $outDemo | ForEach-Object { Write-Host $_ }
+          if ($LASTEXITCODE -ne 0) {
+            $errStr = ($outDemo | Out-String) -replace "`r?`n", " | "
+            Write-Host "::error::DEMO_FAILED: $errStr"
+            throw "ledger_engine.exe demo failed with exit code $LASTEXITCODE"
+          }
 
           if (-not (Test-Path "$stageRoot\工程全流程总台账.xlsx")) {
             throw "Master Excel ledger was not generated!"
