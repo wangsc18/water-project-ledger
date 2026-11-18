@@ -77,14 +77,17 @@ def _make_safe_sheet_title(raw_title: str, used_titles: Set[str]) -> str:
     return cand
 
 
-def _normalize_cell_str(val) -> str:
+def _normalize_cell_str(val, as_amount: bool = False) -> str:
     if val is None:
         return ""
-    if isinstance(val, float):
-        if val.is_integer():
-            return f"{val:.2f}"
-        return f"{val:.2f}"
+    if as_amount and isinstance(val, (int, float)) and not isinstance(val, bool):
+        return f"{float(val):.2f}"
     s = str(val).strip()
+    if as_amount and s:
+        try:
+            return f"{float(s.replace(',', '')):.2f}"
+        except ValueError:
+            pass
     return "" if s == "-" else s
 
 
@@ -153,13 +156,15 @@ def read_back_manual_edits_from_excels(cfg: AppConfig, db: LedgerDB) -> int:
                                     overrides.setdefault(rec_id, {})["doc_no"] = v_doc
 
                             if amount_col is not None and amount_col < len(row):
-                                v_amt = _normalize_cell_str(row[amount_col])
-                                if v_amt != (orig_rec.amount_wan or ""):
+                                v_amt = _normalize_cell_str(row[amount_col], as_amount=True)
+                                orig_amt = _normalize_cell_str(orig_rec.amount_wan, as_amount=True)
+                                if v_amt != orig_amt:
                                     overrides.setdefault(rec_id, {})["amount_wan"] = v_amt
 
                             if remark_col is not None and remark_col < len(row):
                                 v_rem = _normalize_cell_str(row[remark_col])
-                                if v_rem != (orig_rec.remark or ""):
+                                expected_rem = orig_rec.remark or (orig_rec.pending_reason if orig_rec.is_pending else "")
+                                if v_rem != expected_rem:
                                     overrides.setdefault(rec_id, {})["remark"] = v_rem
             finally:
                 wb.close()

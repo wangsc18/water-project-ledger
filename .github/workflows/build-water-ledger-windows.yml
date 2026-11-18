@@ -10,6 +10,8 @@ jobs:
     name: Build Standalone Windows Portable Package (.exe + Offline Chinese OCR)
     runs-on: windows-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -114,3 +116,14 @@ jobs:
           name: 水利工程电子台账_Windows绿色免安装版
           path: ./水利工程电子台账_Windows绿色免安装版.zip
           retention-days: 30
+
+      - name: Publish Windows Portable ZIP to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: 水利工程全流程电子台账 Windows 绿色免安装版 (内置中文OCR)
+          body: |
+            解压即用，无需安装 Python 或任何第三方环境，内置离线中文 RapidOCR 模型。
+            首次体验完演示数据后，双击《一键清空演示数据恢复纯净空库.bat》即可录入真实工程项目。
+          files: ./水利工程电子台账_Windows绿色免安装版.zip
+          overwrite_files: true

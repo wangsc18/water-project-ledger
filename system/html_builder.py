@@ -357,10 +357,10 @@ tr:hover td {{ background: #f8fafc; }}
 <div class="topbar">
   <div class="topbar-title">
     <h1>水利新建工程全流程电子台账 · 状态可视化看板</h1>
-    <p id="updated-time"></p>
+    <p id="updated-time">数据自动同步时间：{now_str}  |  日常操作：将收到的工程文件直接拖入【00_待归档收件箱】即可自动识别更新</p>
   </div>
   <div class="topbar-actions">
-    <a id="master-excel-btn" class="btn btn-excel" href="#">📊 打开《工程全流程总台账.xlsx》</a>
+    <a id="master-excel-btn" class="btn btn-excel" href="{_encode_rel_url(cfg.master_excel_path.name)}">📊 打开《工程全流程总台账.xlsx》</a>
   </div>
 </div>
 
@@ -394,23 +394,27 @@ function escapeHtml(s) {{
     .replace(/"/g, "&quot;");
 }}
 
-function resolveLocalWindowsPath(winRelPath) {{
+function resolveLocalSystemPath(posixRelPath) {{
   try {{
     let loc = decodeURIComponent(window.location.pathname);
-    // Windows file:///D:/folder/项目状态可视化看板.html -> pathname 为 /D:/folder/...
+    // Windows: file:///D:/folder/项目状态可视化看板.html -> pathname 为 /D:/folder/...
     if (/^\\/[A-Za-z]:\\//.test(loc)) {{
       loc = loc.substring(1);
+      const baseDir = loc.substring(0, loc.lastIndexOf("/")).replace(/\\//g, "\\\\");
+      return baseDir + "\\\\" + posixRelPath.replace(/\\//g, "\\\\");
     }}
-    const baseDir = loc.substring(0, loc.lastIndexOf("/")).replace(/\\//g, "\\\\");
-    if (baseDir.includes(":\\\\")) {{
-      return baseDir + "\\\\" + winRelPath;
+    // macOS / Linux: file:///Users/.../项目状态可视化看板.html
+    if (loc.startsWith("/")) {{
+      const baseDir = loc.substring(0, loc.lastIndexOf("/"));
+      return baseDir + "/" + posixRelPath;
     }}
   }} catch (e) {{}}
-  return winRelPath;
+  return posixRelPath;
 }}
 
-function copyWinPath(winRelPath) {{
-  const fullPath = resolveLocalWindowsPath(winRelPath);
+function copyLocalPathBtn(btnEl) {{
+  const rel = btnEl.getAttribute("data-rel") || "";
+  const fullPath = resolveLocalSystemPath(rel);
   if (navigator.clipboard && navigator.clipboard.writeText) {{
     navigator.clipboard.writeText(fullPath).then(() => {{
       showToast("已复制本地路径：" + fullPath);
@@ -689,7 +693,7 @@ function renderLedgerTableSection(title, filesList, showProjCol) {{
         <td>${{escapeHtml(f.remark || f.pending_reason || "-")}}</td>
         <td style="white-space:nowrap">
           <a class="action-btn action-open" href="${{f.href}}" target="_blank">📄 打开原件</a>
-          <button class="action-btn" onclick="copyWinPath('${{f.win_rel_path.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, &quot;\\\\'&quot;)}}')">📋 复制路径</button>
+          <button class="action-btn" data-rel="${{escapeHtml(f.rel_path)}}" onclick="copyLocalPathBtn(this)">📋 复制路径</button>
         </td>
       </tr>
     `).join("");
