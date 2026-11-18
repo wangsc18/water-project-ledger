@@ -1,0 +1,4 @@
+*.bat text eol=crlf
+*.vbs text eol=crlf
+*.yaml text eol=crlf
+*.txt text eol=crlf

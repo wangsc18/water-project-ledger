@@ -1,0 +1,13 @@
+# 临时缓存与编译产物
+__pycache__/
+*.pyc
+system/data/.ocr_scratch/
+system/data/watcher.pid
+system/data/stop.signal
+system/build_tmp/
+system/dist_bin/
+system/runtime/
+~$*
+~待生效_*
+.DS_Store
+Thumbs.db
